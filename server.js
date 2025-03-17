@@ -14,8 +14,13 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    origin: [
+      'http://localhost:5173',  // Desenvolvimento Vite
+      'http://localhost:4173',  // Preview Vite
+      'https://ane-software-g75sbnxcc-jarbios-projects.vercel.app',
+      'https://ane-software.vercel.app'
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   },
 });
@@ -45,7 +50,13 @@ if (process.env.NODE_ENV !== "production") {
 // Configuração de CORS para rotas HTTP
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:4173',
+      'https://ane-software-g75sbnxcc-jarbios-projects.vercel.app',
+      'https://ane-software.vercel.app'
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   })
 );
@@ -173,6 +184,11 @@ app.delete("/files/:filename", (req, res) => {
 });
 
 app.get("/stats", (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth || auth !== "Bearer admin-token") {
+    logger.warn("Acesso negado: sem autorização para stats");
+    return res.status(403).json({ error: "Permissão negada" });
+  }
   logger.info("Estatísticas retornadas");
   res.json(stats);
 });
