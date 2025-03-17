@@ -15,10 +15,11 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: [
-      'http://localhost:5173',  // Desenvolvimento Vite
-      'http://localhost:4173',  // Preview Vite
-      'https://ane-software-g75sbnxcc-jarbios-projects.vercel.app',
-      'https://ane-software.vercel.app'
+      'http://localhost:5173',
+      'http://localhost:4173',
+      'https://ane-software.vercel.app',              // Adicione aqui também para WebSocket
+      'https://ane-software-qvu95hlai-jarbios-projects.vercel.app',
+      'https://ane-backend-nin2.onrender.com'
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
@@ -51,13 +52,14 @@ if (process.env.NODE_ENV !== "production") {
 app.use(
   cors({
     origin: [
-      'http://localhost:5173',
-      'http://localhost:4173',
-      'https://ane-software-g75sbnxcc-jarbios-projects.vercel.app',
-      'https://ane-software.vercel.app'
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    credentials: true,
+    'http://localhost:5173',                          // Desenvolvimento local (Vite)
+    'http://localhost:4173',                          // Preview local (Vite)
+    'https://ane-software.vercel.app',                // Frontend em produção no Vercel
+    'https://ane-software-qvu95hlai-jarbios-projects.vercel.app', // URL específica do deploy
+    'https://ane-backend-nin2.onrender.com'           // Backend em produção
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: true,
   })
 );
 app.use(express.json());
