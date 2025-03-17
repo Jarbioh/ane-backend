@@ -17,8 +17,9 @@ const io = new Server(server, {
     origin: [
       'http://localhost:5173',
       'http://localhost:4173',
-      'https://ane-software.vercel.app',              // Adicione aqui também para WebSocket
+      'https://ane-software.vercel.app',
       'https://ane-software-qvu95hlai-jarbios-projects.vercel.app',
+      'https://ane-software-h3as5ogfu-jarbios-projects.vercel.app', // Nova origem do frontend
       'https://ane-backend-nin2.onrender.com'
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -52,11 +53,12 @@ if (process.env.NODE_ENV !== "production") {
 app.use(
   cors({
     origin: [
-    'http://localhost:5173',                          // Desenvolvimento local (Vite)
-    'http://localhost:4173',                          // Preview local (Vite)
-    'https://ane-software.vercel.app',                // Frontend em produção no Vercel
-    'https://ane-software-qvu95hlai-jarbios-projects.vercel.app', // URL específica do deploy
-    'https://ane-backend-nin2.onrender.com'           // Backend em produção
+      'http://localhost:5173',
+      'http://localhost:4173',
+      'https://ane-software.vercel.app',
+      'https://ane-software-qvu95hlai-jarbios-projects.vercel.app',
+      'https://ane-software-h3as5ogfu-jarbios-projects.vercel.app', // Adicione aqui também
+      'https://ane-backend-nin2.onrender.com'
   ],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   credentials: true,
@@ -186,11 +188,6 @@ app.delete("/files/:filename", (req, res) => {
 });
 
 app.get("/stats", (req, res) => {
-  const auth = req.headers.authorization;
-  if (!auth || auth !== "Bearer admin-token") {
-    logger.warn("Acesso negado: sem autorização para stats");
-    return res.status(403).json({ error: "Permissão negada" });
-  }
   logger.info("Estatísticas retornadas");
   res.json(stats);
 });
