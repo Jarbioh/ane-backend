@@ -9,22 +9,18 @@ const { Server } = require("socket.io");
 const winston = require("winston");
 const { promisify } = require("util");
 const sanitizeHtml = require("sanitize-html");
+const axios = require("axios");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:4173',
-      'https://ane-software.vercel.app',
-      'https://ane-software-qvu95hlai-jarbios-projects.vercel.app',
-      'https://ane-software-h3as5ogfu-jarbios-projects.vercel.app', // Nova origem do frontend
-      'https://ane-backend-nin2.onrender.com'
-    ],
+    origin: '*',
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   },
+  pingTimeout: 60000,
+  pingInterval: 25000,
 });
 const PORT = process.env.PORT || 3000;
 
@@ -49,19 +45,11 @@ if (process.env.NODE_ENV !== "production") {
   );
 }
 
-// Configuração de CORS para rotas HTTP
 app.use(
   cors({
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:4173',
-      'https://ane-software.vercel.app',
-      'https://ane-software-qvu95hlai-jarbios-projects.vercel.app',
-      'https://ane-software-h3as5ogfu-jarbios-projects.vercel.app', // Adicione aqui também
-      'https://ane-backend-nin2.onrender.com'
-  ],
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  credentials: true,
+    origin: '*',
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
   })
 );
 app.use(express.json());
@@ -78,13 +66,13 @@ const storage = multer.diskStorage({
 });
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // Alinhado com o frontend: 10 MB
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = [
       "application/pdf",
       "image/jpeg",
       "image/png",
-      "audio/webm", // Suporte a áudio do frontend
+      "audio/webm",
     ];
     if (!allowedTypes.includes(file.mimetype)) {
       return cb(new Error("Apenas PDFs, JPEG, PNG e áudio WEBM são permitidos."));
@@ -127,11 +115,14 @@ loadDataFromDisk();
 
 // Rotas HTTP
 app.get("/", (req, res) => {
+  const startTime = Date.now();
   logger.info("Rota raiz acessada");
   res.send("Servidor funcionando! Acesse as rotas ou use o WebSocket.");
+  logger.info(`Rota raiz respondida em ${Date.now() - startTime}ms`);
 });
 
 app.post("/upload", upload.single("file"), (req, res) => {
+  const startTime = Date.now();
   if (!req.file) {
     logger.error("Nenhum arquivo enviado em /upload");
     return res.status(400).json({ error: "Nenhum arquivo enviado" });
@@ -139,14 +130,15 @@ app.post("/upload", upload.single("file"), (req, res) => {
   stats.files += 1;
   io.emit("stats-update", stats);
   io.emit("file-uploaded", req.file.filename);
-  logger.info(`Arquivo ${req.file.filename} enviado`);
+  logger.info(`Arquivo ${req.file.filename} enviado em ${Date.now() - startTime}ms`);
   res.json({ filename: req.file.filename, message: "Arquivo enviado com sucesso" });
 });
 
 app.get("/files", async (req, res) => {
+  const startTime = Date.now();
   try {
     const files = await readdirAsync(uploadsDir);
-    logger.info("Lista de arquivos retornada");
+    logger.info(`Lista de arquivos retornada em ${Date.now() - startTime}ms`);
     res.json({ files: files.filter((f) => f !== ".gitignore") });
   } catch (err) {
     logger.error("Erro ao listar arquivos:", err);
@@ -155,11 +147,12 @@ app.get("/files", async (req, res) => {
 });
 
 app.get("/download/:filename", (req, res) => {
+  const startTime = Date.now();
   const filePath = path.join(uploadsDir, req.params.filename);
   if (fs.existsSync(filePath)) {
     res.download(filePath, req.params.filename, (err) => {
       if (err) logger.error(`Erro ao enviar arquivo ${req.params.filename}:`, err);
-      else logger.info(`Arquivo ${req.params.filename} baixado`);
+      else logger.info(`Arquivo ${req.params.filename} baixado em ${Date.now() - startTime}ms`);
     });
   } else {
     logger.error(`Arquivo ${req.params.filename} não encontrado`);
@@ -168,6 +161,7 @@ app.get("/download/:filename", (req, res) => {
 });
 
 app.delete("/files/:filename", (req, res) => {
+  const startTime = Date.now();
   const filePath = path.join(uploadsDir, req.params.filename);
   if (fs.existsSync(filePath)) {
     fs.unlink(filePath, (err) => {
@@ -178,7 +172,7 @@ app.delete("/files/:filename", (req, res) => {
       stats.files = Math.max(0, stats.files - 1);
       io.emit("stats-update", stats);
       io.emit("file-deleted", req.params.filename);
-      logger.info(`Arquivo ${req.params.filename} excluído`);
+      logger.info(`Arquivo ${req.params.filename} excluído em ${Date.now() - startTime}ms`);
       res.json({ message: "Arquivo excluído com sucesso" });
     });
   } else {
@@ -188,16 +182,19 @@ app.delete("/files/:filename", (req, res) => {
 });
 
 app.get("/stats", (req, res) => {
-  logger.info("Estatísticas retornadas");
+  const startTime = Date.now();
+  logger.info(`Estatísticas retornadas em ${Date.now() - startTime}ms`);
   res.json(stats);
 });
 
 app.get("/users", (req, res) => {
-  logger.info("Lista de usuários retornada");
+  const startTime = Date.now();
+  logger.info(`Lista de usuários retornada em ${Date.now() - startTime}ms`);
   res.json(users);
 });
 
 app.post("/users", (req, res) => {
+  const startTime = Date.now();
   const { name, email, status } = req.body;
   const auth = req.headers.authorization;
   if (!auth || auth !== "Bearer admin-token") {
@@ -214,11 +211,12 @@ app.post("/users", (req, res) => {
   saveDataToDisk();
   io.emit("stats-update", stats);
   io.emit("user-updated", users);
-  logger.info(`Usuário ${name} (${email}) adicionado`);
+  logger.info(`Usuário ${name} (${email}) adicionado em ${Date.now() - startTime}ms`);
   res.status(201).json(newUser);
 });
 
 app.put("/users/:id", (req, res) => {
+  const startTime = Date.now();
   const { id } = req.params;
   const { name, email, status } = req.body;
   const auth = req.headers.authorization;
@@ -238,11 +236,12 @@ app.put("/users/:id", (req, res) => {
   users[userIndex] = { ...users[userIndex], name, email, status };
   saveDataToDisk();
   io.emit("user-updated", users);
-  logger.info(`Usuário ${id} atualizado`);
+  logger.info(`Usuário ${id} atualizado em ${Date.now() - startTime}ms`);
   res.json(users[userIndex]);
 });
 
 app.delete("/users/:id", (req, res) => {
+  const startTime = Date.now();
   const userId = parseInt(req.params.id, 10);
   const auth = req.headers.authorization;
   if (!auth || auth !== "Bearer admin-token") {
@@ -256,7 +255,7 @@ app.delete("/users/:id", (req, res) => {
     saveDataToDisk();
     io.emit("stats-update", stats);
     io.emit("user-deleted", userId);
-    logger.info(`Usuário ${userId} excluído`);
+    logger.info(`Usuário ${userId} excluído em ${Date.now() - startTime}ms`);
     res.json({ message: "Usuário excluído com sucesso" });
   } else {
     logger.error(`Usuário ${userId} não encontrado para exclusão`);
@@ -265,11 +264,13 @@ app.delete("/users/:id", (req, res) => {
 });
 
 app.get("/messages", (req, res) => {
-  logger.info("Mensagens retornadas");
+  const startTime = Date.now();
+  logger.info(`Mensagens retornadas em ${Date.now() - startTime}ms`);
   res.json(messages);
 });
 
 app.post("/sanitize", (req, res) => {
+  const startTime = Date.now();
   const { text } = req.body;
   const auth = req.headers.authorization;
   if (!auth || auth !== "Bearer admin-token") {
@@ -284,14 +285,34 @@ app.post("/sanitize", (req, res) => {
     allowedTags: ["b", "i", "em", "strong", "a"],
     allowedAttributes: { a: ["href"] },
   });
-  logger.info("Texto sanitizado com sucesso");
+  logger.info(`Texto sanitizado com sucesso em ${Date.now() - startTime}ms`);
   res.json({ sanitized });
 });
 
+// Keep-alive para evitar suspensão no Railway
+const keepAlive = () => {
+  setInterval(async () => {
+    try {
+      const startTime = Date.now();
+      await axios.get(`https://your-backend.railway.app`);
+      logger.info(`Keep-alive: Solicitação enviada para evitar suspensão em ${Date.now() - startTime}ms`);
+    } catch (err) {
+      logger.error("Keep-alive: Erro ao enviar solicitação:", err.message);
+    }
+  }, 5 * 60 * 1000); // Enviar a cada 5 minutos
+};
+
+keepAlive();
+
 // WebSocket
 io.on("connection", (socket) => {
-  logger.info(`WebSocket conectado: ${socket.id}`);
+  const startTime = Date.now();
+  logger.info(`WebSocket conectado: ${socket.id} em ${Date.now() - startTime}ms`);
   socket.emit("stats-update", stats);
+
+  socket.on("connect_error", (err) => {
+    logger.error(`Erro de conexão WebSocket no servidor: ${err.message}`);
+  });
 
   socket.on("join-room", (roomID) => {
     socket.join(roomID);
